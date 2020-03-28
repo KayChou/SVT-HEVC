@@ -22,6 +22,7 @@
 #include "EbAppConfig.h"
 #include "EbAppContext.h"
 #include "EbTime.h"
+#include "slog.h"
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -81,6 +82,9 @@ void AssignAppThreadGroup(uint8_t targetSocket) {
  ***************************************/
 int32_t main(int32_t argc, char* argv[])
 {
+	LOG_INIT;
+	LOG_INFO("Main entry");
+
     if (GetSVTVersion(argc, argv) || GetHelp(argc, argv))
         return EB_ErrorNone;
 
@@ -116,6 +120,7 @@ int32_t main(int32_t argc, char* argv[])
         return EB_ErrorBadParameter;
 
     // Initialize config
+	LOG_INFO("Initialize config");
     for (instanceCount = 0; instanceCount < numChannels; ++instanceCount) {
         configs[instanceCount] = (EbConfig_t*)malloc(sizeof(EbConfig_t));
         if (!configs[instanceCount])
@@ -151,6 +156,7 @@ int32_t main(int32_t argc, char* argv[])
             AssignAppThreadGroup(configs[0]->targetSocket);
 
         // Init the Encoder
+		LOG_INFO("Init encoder");
         for (instanceCount = 0; instanceCount < numChannels; ++instanceCount) {
             if (return_errors[instanceCount] == EB_ErrorNone) {
 
@@ -169,6 +175,7 @@ int32_t main(int32_t argc, char* argv[])
 
         {
             // Start the Encoder
+			LOG_INFO("Start encoder");
             for (instanceCount = 0; instanceCount < numChannels; ++instanceCount) {
                 if (return_errors[instanceCount] == EB_ErrorNone) {
                     return_error = (EB_ERRORTYPE)(return_error & return_errors[instanceCount]);
@@ -192,6 +199,7 @@ int32_t main(int32_t argc, char* argv[])
             }
             printf("Encoding          ");
             fflush(stdout);
+			LOG_INFO("Encoding...");
 
             while (exitCondition == APP_ExitConditionNone) {
                 exitCondition = APP_ExitConditionFinished;
@@ -303,6 +311,7 @@ int32_t main(int32_t argc, char* argv[])
         }
 
         // DeInit Encoder
+		LOG_INFO("DeInit encoder");
         for (instanceCount = numChannels; instanceCount > 0; --instanceCount) {
             if (return_errors[instanceCount - 1] == EB_ErrorNone)
                 return_errors[instanceCount - 1] = DeInitEncoder(appCallbacks[instanceCount - 1], instanceCount - 1);
@@ -320,7 +329,7 @@ int32_t main(int32_t argc, char* argv[])
         if (appCallbacks[instanceCount])
             free(appCallbacks[instanceCount]);
     }
-
+	LOG_INFO("Encoder finished");
     printf("Encoder finished\n");
 
 

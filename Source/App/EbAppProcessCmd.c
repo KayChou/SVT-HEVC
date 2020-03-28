@@ -17,6 +17,7 @@
 #include "EbAppInputy4m.h"
 
 #include "EbTime.h"
+#include "slog.h"
 /***************************************
  * Macros
  ***************************************/
@@ -1209,6 +1210,7 @@ int ParseDolbyVisionRPUMetadata(
 /************************************/
 APPEXITCONDITIONTYPE ProcessInputBuffer(EbConfig_t *config, EbAppContext_t *appCallBack)
 {
+	LOG_INFO("Process Input Buffer: Read yuv frames to input buffer");
     uint8_t            is16bit = (uint8_t)(config->encoderBitDepth > 8);
     EB_BUFFERHEADERTYPE     *headerPtr = appCallBack->inputBufferPool;
     EB_COMPONENTTYPE        *componentHandle = (EB_COMPONENTTYPE*)appCallBack->svtEncoderHandle;
@@ -1318,6 +1320,7 @@ APPEXITCONDITIONTYPE ProcessOutputStreamBuffer(
     EbAppContext_t         *appCallBack,
     uint8_t                 picSendDone)
 {
+	LOG_INFO("Process Output Stream Buffer");
     APPPORTACTIVETYPE      *portState       = &appCallBack->outputStreamPortActive;
     EB_BUFFERHEADERTYPE    *headerPtr;
     EB_COMPONENTTYPE       *componentHandle = (EB_COMPONENTTYPE*)appCallBack->svtEncoderHandle;
@@ -1427,6 +1430,7 @@ APPEXITCONDITIONTYPE ProcessOutputReconBuffer(
     EbConfig_t             *config,
     EbAppContext_t         *appCallBack)
 {
+	LOG_INFO("Process Output Recon Buffer");
     EB_BUFFERHEADERTYPE    *headerPtr = appCallBack->reconBuffer; // needs to change for buffered input
     EB_COMPONENTTYPE       *componentHandle = (EB_COMPONENTTYPE*)appCallBack->svtEncoderHandle;
     APPEXITCONDITIONTYPE    return_value = APP_ExitConditionNone;
