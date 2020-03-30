@@ -778,6 +778,7 @@ static void ReadInputFrames(
     inputPtr->cbStride = inputPaddedWidth >> subWidthCMinus1;
     inputPtr->dolbyVisionRpu.payloadSize = 0;
 
+	//not preload any frames
     if (config->bufferedInput == -1) {
         if (is16bit == 0 || (is16bit == 1 && config->compressedTenBitFormat == 0)) {
 
@@ -787,7 +788,7 @@ static void ReadInputFrames(
 
             // Interlaced Video
             if (config->separateFields) {
-
+				LOG_INFO("Read SeparateFields file");
                 ProcessInputFieldStandardMode(
                     config,
                     headerPtr,
@@ -816,8 +817,9 @@ static void ReadInputFrames(
                 if (config->processedFrameCount % 2 == 0) {
                     fseek(inputFile, -(long)(readSize << 1), SEEK_CUR);
                 }
-            } else {
-
+            } 
+			else {
+				LOG_INFO("Read unSeparateFields file");
                 /* if input is a y4m file, read next line which contains "FRAME" */
                 if (config->y4m_input == EB_TRUE)
                     read_y4m_frame_delimiter(config);
@@ -851,7 +853,8 @@ static void ReadInputFrames(
 
                 }
             }
-        } else {
+        } 
+		else {
             // 10-bit Compressed Unpacked Mode
             const uint32_t lumaReadSize = inputPaddedWidth * inputPaddedHeight;
             const uint32_t chromaReadSize = lumaReadSize >> (3 - colorFormat);
@@ -878,7 +881,9 @@ static void ReadInputFrames(
                 headerPtr->nFilledLen += (uint32_t)fread(inputPtr->crExt, 1, nbitChromaReadSize, inputFile);
             }
         }
-    } else {
+    }
+	//prload bufferedInput frames
+	else {
         if (is16bit && config->compressedTenBitFormat == 1) {
             // Determine size of each plane
 
@@ -902,7 +907,8 @@ static void ReadInputFrames(
             inputPtr->crExt = config->sequenceBuffer[config->processedFrameCount % config->bufferedInput] + luma8bitSize + 2 * chroma8bitSize + luma2bitSize + chroma2bitSize;
 
             headerPtr->nFilledLen = (uint32_t)(luma8bitSize + luma2bitSize + 2 * (chroma8bitSize + chroma2bitSize));
-        } else {
+        } 
+		else {
             //Normal unpacked mode:yuv420p10le yuv422p10le yuv444p10le
 
             // Determine size of each plane
@@ -1227,7 +1233,7 @@ APPEXITCONDITIONTYPE ProcessInputBuffer(EbConfig_t *config, EbAppContext_t *appC
     uint32_t compressed10bitFrameSize = (uint32_t)((inputPaddedWidth*inputPaddedHeight) + 2 * ((inputPaddedWidth*inputPaddedHeight) >> (3 - colorFormat)));
     compressed10bitFrameSize += compressed10bitFrameSize / 4;
 
-    if (config->injector && config->processedFrameCount)
+    if (config->injector && config->processedFrameCount) //input frames at specified frame rate
     {
         EbInjector(config->processedFrameCount, config->injectorFrameRate);
     }
@@ -1426,6 +1432,7 @@ APPEXITCONDITIONTYPE ProcessOutputStreamBuffer(
     }
 	return return_value;
 }
+
 APPEXITCONDITIONTYPE ProcessOutputReconBuffer(
     EbConfig_t             *config,
     EbAppContext_t         *appCallBack)

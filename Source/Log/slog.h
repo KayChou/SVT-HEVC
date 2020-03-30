@@ -131,6 +131,7 @@ typedef struct {
     int hour;
     int min;
     int sec;
+	int msec;
     int usec;
 } SlogDate;
 

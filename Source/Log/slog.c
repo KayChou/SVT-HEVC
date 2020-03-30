@@ -128,8 +128,12 @@ static inline int clock_gettime(int clock_id, struct timespec *ts)
     ts->tv_nsec = tv.tv_usec * 1000;
     return 0;
 }
+
 #endif /* DARWIN */
 
+#ifndef DARWIN
+#include <windows.h>
+#endif
 
 void slog_get_date(SlogDate *pDate)
 {
@@ -144,7 +148,18 @@ void slog_get_date(SlogDate *pDate)
     pDate->hour = timeinfo.tm_hour;
     pDate->min = timeinfo.tm_min;
     pDate->sec = timeinfo.tm_sec;
-    pDate->usec = 0;
+	
+	static LARGE_INTEGER freq, start;
+	LARGE_INTEGER count;
+	if (!QueryPerformanceCounter(&count)) {}
+
+	if (!freq.QuadPart) { // one time initialization
+		if (!QueryPerformanceFrequency(&freq)) {}
+		start = count;
+	}
+	//printf("%d", count);
+	pDate->msec = (count.QuadPart / (freq.QuadPart / 1000)) % 1000;
+	pDate->usec = (count.QuadPart / (freq.QuadPart / 1000000)) % 1000;
 }
 
 
@@ -169,9 +184,9 @@ void slog_prepare_output(const char* pStr, const SlogDate *pDate, int nType, int
 						 const char* file, const char* function, const char* line)
 {
     char sDate[32];
-    snprintf(sDate, sizeof(sDate), "%02d.%02d.%02d-%02d:%02d:%02d.%02d", 
+    snprintf(sDate, sizeof(sDate), "%02d.%02d.%02d-%02d:%02d:%02d.%03d.%03d", 
                     pDate->year, pDate->mon, pDate->day, pDate->hour, 
-                    pDate->min, pDate->sec, pDate->usec);
+                    pDate->min, pDate->sec, pDate->msec, pDate->usec);
 
     /* Walk throu */
     int i;
@@ -187,9 +202,9 @@ void slog_prepare_output(const char* pStr, const SlogDate *pDate, int nType, int
         if ((nType != SLOG_NONE) && (g_SlogTags[i].nType == nType) && (g_SlogTags[i].pDesc != NULL))
         {
             if (nColor)
-				snprintf(pOut, nSize, "%s - [%-5s] %-64s \t\t [%s] {%s} %d", sDate, g_SlogTags[i].pDesc, pStr, file, function, line);
+				snprintf(pOut, nSize, "%-32s - [%-5s] %-64s \t\t [%s] {%s} %d", sDate, g_SlogTags[i].pDesc, pStr, file, function, line);
             else
-                snprintf(pOut, nSize, "%s - [%-5s] %-64s \t\t [%s] {%s} %d", sDate, g_SlogTags[i].pDesc, pStr, file, function, line);
+                snprintf(pOut, nSize, "%-32s - [%-5s] %-64s \t\t [%s] {%s} %d", sDate, g_SlogTags[i].pDesc, pStr, file, function, line);
 
             return;
         }
