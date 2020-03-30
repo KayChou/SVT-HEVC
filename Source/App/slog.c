@@ -131,35 +131,27 @@ static inline int clock_gettime(int clock_id, struct timespec *ts)
 
 #endif /* DARWIN */
 
-#ifndef DARWIN
-#include <windows.h>
-#endif
-
 void slog_get_date(SlogDate *pDate)
 {
     struct tm timeinfo;
     time_t rawtime = time(NULL);
     localtime_s(&timeinfo, &rawtime);
 
-    /* Get System Date */
+    ///* Get System Date */
     pDate->year = timeinfo.tm_year+1900;
     pDate->mon = timeinfo.tm_mon+1;
     pDate->day = timeinfo.tm_mday;
-    pDate->hour = timeinfo.tm_hour;
-    pDate->min = timeinfo.tm_min;
-    pDate->sec = timeinfo.tm_sec;
-	
-	static LARGE_INTEGER freq, start;
-	LARGE_INTEGER count;
-	if (!QueryPerformanceCounter(&count)) {}
+    //pDate->hour = timeinfo.tm_hour;
+    //pDate->min = timeinfo.tm_min;
+    //pDate->sec = timeinfo.tm_sec;
 
-	if (!freq.QuadPart) { // one time initialization
-		if (!QueryPerformanceFrequency(&freq)) {}
-		start = count;
-	}
-	//printf("%d", count);
-	pDate->msec = (count.QuadPart / (freq.QuadPart / 1000)) % 1000;
-	pDate->usec = (count.QuadPart / (freq.QuadPart / 1000000)) % 1000;
+	if (!QueryPerformanceCounter(&(pDate->count))) {}
+	//printf("\n%d\n", pDate->start.QuadPart);
+	pDate->usec = ((pDate->count.QuadPart - pDate->start.QuadPart) / (pDate->freq.QuadPart / 1000000)) % 1000;
+	pDate->msec = ((pDate->count.QuadPart - pDate->start.QuadPart) / (pDate->freq.QuadPart / 1000)) % 1000;
+	pDate->sec = ((pDate->count.QuadPart - pDate->start.QuadPart) / (pDate->freq.QuadPart) + pDate->sec_start) % 60;
+	pDate->min = ((pDate->count.QuadPart - pDate->start.QuadPart) / 60 / (pDate->freq.QuadPart) + pDate->min_start) % 60;
+	pDate->hour = ((pDate->count.QuadPart - pDate->start.QuadPart) / 360 / (pDate->freq.QuadPart) + pDate->hour_start) % 24;
 }
 
 
@@ -202,9 +194,9 @@ void slog_prepare_output(const char* pStr, const SlogDate *pDate, int nType, int
         if ((nType != SLOG_NONE) && (g_SlogTags[i].nType == nType) && (g_SlogTags[i].pDesc != NULL))
         {
             if (nColor)
-				snprintf(pOut, nSize, "%-32s - [%-5s] %-64s \t\t [%s] {%s} %d", sDate, g_SlogTags[i].pDesc, pStr, file, function, line);
+				snprintf(pOut, nSize, "%-16s - [%-5s] %-64s \t\t [%s] {%s} %d", sDate, g_SlogTags[i].pDesc, pStr, file, function, line);
             else
-                snprintf(pOut, nSize, "%-32s - [%-5s] %-64s \t\t [%s] {%s} %d", sDate, g_SlogTags[i].pDesc, pStr, file, function, line);
+                snprintf(pOut, nSize, "%-16s - [%-5s] %-64s \t\t [%s] {%s} %d", sDate, g_SlogTags[i].pDesc, pStr, file, function, line);
 
             return;
         }
@@ -299,7 +291,6 @@ void slog(int nLevel, int nFlag, const char *pMsg, const char* file, const char*
     /* Check logging levels */
     if(!nLevel || nLevel <= g_slogCfg.nLogLevel || nLevel <= g_slogCfg.nFileLevel)
     {
-        SlogDate date;
         slog_get_date(&date);
 
         char sMessage[MAXMSG];
@@ -389,6 +380,23 @@ void slog_init(const char* pName, const char* pConf, int nLogLevel, int nTdSafe)
     g_slogCfg.nToFile = 3;
     g_slogCfg.nPretty = 0;
     g_slogCfg.nSync = 0;
+
+	struct tm timeinfo;
+	time_t rawtime = time(NULL);
+	localtime_s(&timeinfo, &rawtime);
+
+	LARGE_INTEGER count, freq;
+	if (!QueryPerformanceCounter(&count)) {}//printf("Counter fail\n"); }
+	if (!(date.freq.QuadPart)) { // one time initialization
+		if (!QueryPerformanceFrequency(&freq)) { }
+	}
+	date.count = count;
+	date.freq = freq;
+	date.start = date.count;
+	date.hour_start = timeinfo.tm_hour;
+	date.min_start = timeinfo.tm_min;
+	date.sec_start = timeinfo.tm_sec;
+	//printf("\n%lld %lld\n", date.count.QuadPart, date.start.QuadPart);
 
     /* Init mutex sync */
     slog_sync_init();

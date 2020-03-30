@@ -33,6 +33,10 @@ extern "C" {
 
 #include <pthread.h>
 
+#ifndef DARWIN
+#include <windows.h>
+#endif
+
 
 /* Definations for version info */
 #define SLOGVERSION_MAJOR  1
@@ -133,6 +137,12 @@ typedef struct {
     int sec;
 	int msec;
     int usec;
+	LARGE_INTEGER start;
+	LARGE_INTEGER count;
+	LARGE_INTEGER freq;
+	int hour_start;
+	int min_start;
+	int sec_start;
 } SlogDate;
 
 typedef struct {
@@ -140,6 +150,9 @@ typedef struct {
     const char* pDesc;
     const char* pColor;
 } SlogTag;
+
+
+SlogDate date;
 
 const char* slog_version(int nMin);
 
