@@ -9,6 +9,7 @@
 #endif
 #include "EbUtility.h"
 #include "EbDefinitions.h"
+#include <windows.h>
 
 /*****************************************
  * Z-Order
@@ -380,8 +381,21 @@ const MiniGopStats_t* GetMiniGopStats(const EB_U32 miniGopIndex) {
 void EbHevcStartTime(EB_U64 *Startseconds, EB_U64 *Startuseconds)
 {
 #ifdef _WIN32
-    *Startseconds = (unsigned long long)clock();
-    (void)(*Startuseconds);
+
+	static LARGE_INTEGER freq, start;
+	LARGE_INTEGER count;
+	if (!QueryPerformanceCounter(&count)) {}
+
+	if (!freq.QuadPart) { // one time initialization
+		if (!QueryPerformanceFrequency(&freq)) {}
+		start = count;
+}
+	//printf("%d", count);
+	//*Startseconds = ((count.QuadPart - start.QuadPart) / freq.QuadPart) ;
+	*Startseconds = (count.QuadPart / (freq.QuadPart));
+	*Startuseconds = ((count.QuadPart - start.QuadPart) / (freq.QuadPart / 1000000)) % 1000000;
+    //*Startseconds = (unsigned long long)clock();
+    //(void)(*Startuseconds);
 #else
     struct timeval start;
     gettimeofday(&start, NULL);
@@ -424,17 +438,42 @@ void EbHevcComputeOverallElapsedTime(EB_U64 Startseconds, EB_U64 Startuseconds, 
 void EbHevcComputeOverallElapsedTimeMs(EB_U64 Startseconds, EB_U64 Startuseconds, EB_U64 Finishseconds, EB_U64 Finishuseconds, double *duration)
 {
 #ifdef _WIN32
-    //double  duration;
-    *duration = (double)(Finishseconds - Startseconds);
-    //SVT_LOG("\nElapsed time: %3.3f seconds\n", *duration);
-    (void)(Startuseconds);
-    (void)(Finishuseconds);
+    ////double  duration;
+    //*duration = (double)(Finishseconds - Startseconds);
+    ////SVT_LOG("\nElapsed time: %3.3f seconds\n", *duration);
+    //(void)(Startuseconds);
+    //(void)(Finishuseconds);
+	long seconds, useconds;
+	seconds = Finishseconds - Startseconds;
+	useconds = Finishuseconds - Startuseconds;
+	*duration = (double)((seconds) * 1000 + useconds / 1000.0);
 #else
     long   mtime, seconds, useconds;
     seconds = Finishseconds - Startseconds;
     useconds = Finishuseconds - Startuseconds;
     mtime = ((seconds) * 1000 + useconds / 1000.0) + 0.5;
     *duration = (double)mtime;
+    //SVT_LOG("\nElapsed time: %3.3ld seconds\n", mtime/1000);
+#endif
+}
+
+void EbHevcComputeOverallElapsedTimeRealMs(EB_U64 Startseconds, EB_U64 Startuseconds, EB_U64 Finishseconds, EB_U64 Finishuseconds, double *duration)
+{
+#ifdef _WIN32
+    ////double  duration;
+    //*duration = (double)(Finishseconds - Startseconds);
+    ////SVT_LOG("\nElapsed time: %3.3f seconds\n", *duration);
+    //(void)(Startuseconds);
+    //(void)(Finishuseconds);
+	long seconds, useconds;
+	seconds = Finishseconds - Startseconds;
+	useconds = Finishuseconds - Startuseconds;
+	*duration = (double)((seconds) * 1000 + useconds / 1000.0);
+#else
+    long seconds, useconds;
+    seconds = Finishseconds - Startseconds;
+    useconds = Finishuseconds - Startuseconds;
+    *duration = (double)((seconds) * 1000 + useconds / 1000.0);
     //SVT_LOG("\nElapsed time: %3.3ld seconds\n", mtime/1000);
 #endif
 }

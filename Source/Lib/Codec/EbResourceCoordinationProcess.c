@@ -356,7 +356,7 @@ void* ResourceCoordinationKernel(void *inputPtr)
     EB_U32                          chromaFormat = EB_YUV420;
     EB_U32                          subWidthCMinus1 = 1;
     EB_U32                          subHeightCMinus1 = 1;
-    
+
     for(;;) {
 
         // Tie instanceIndex to zero for now...
@@ -584,9 +584,7 @@ void* ResourceCoordinationKernel(void *inputPtr)
         pictureControlSetPtr->pictureNumber                   = contextPtr->pictureNumberArray[instanceIndex]++;
 
 #if DEADLOCK_DEBUG
-        if ((pictureControlSetPtr->pictureNumber >= MIN_POC) && (pictureControlSetPtr->pictureNumber <= MAX_POC))
-            if (!endOfSequenceFlag)
-                SVT_LOG("POC %lu RESCOOR IN \n", pictureControlSetPtr->pictureNumber);
+        SVT_LOG("POC %lld RESCOOR IN \n", pictureControlSetPtr->pictureNumber);
 #endif
         // Set the picture structure: 0: progressive, 1: top, 2: bottom
         pictureControlSetPtr->pictStruct = sequenceControlSetPtr->interlacedVideo == EB_FALSE ?
@@ -638,13 +636,9 @@ void* ResourceCoordinationKernel(void *inputPtr)
             } else
                 outputResultsPtr->pictureControlSetWrapperPtr = prevPictureControlSetWrapperPtr;
 
+            eb_add_time_entry(EB_RESOURCE, EB_FINISH, EB_TASK0, pictureControlSetPtr->pictureNumber - 1, -1);
             // Post the finished Results Object
             EbPostFullObject(outputWrapperPtr);
-#if DEADLOCK_DEBUG
-            if ((((PictureParentControlSet_t *)outputResultsPtr->pictureControlSetWrapperPtr->objectPtr)->pictureNumber >= MIN_POC) &&
-                    (((PictureParentControlSet_t *)outputResultsPtr->pictureControlSetWrapperPtr->objectPtr)->pictureNumber <= MAX_POC))
-                SVT_LOG("POC %lu RESCOOR OUT \n", ((PictureParentControlSet_t *)outputResultsPtr->pictureControlSetWrapperPtr->objectPtr)->pictureNumber);
-#endif
         }
 
         prevPictureControlSetWrapperPtr = pictureControlSetWrapperPtr;
@@ -652,6 +646,11 @@ void* ResourceCoordinationKernel(void *inputPtr)
         if (sequenceControlSetPtr->staticConfig.segmentOvEnabled) {
             EB_MEMCPY(pictureControlSetPtr->segmentOvArray, ebInputPtr->segmentOvPtr, sizeof(SegmentOverride_t) * sequenceControlSetPtr->lcuTotalCount);
         }
+
+#if DEADLOCK_DEBUG
+        SVT_LOG("POC %lld RESCOOR OUT \n", pictureControlSetPtr->pictureNumber);
+#endif
+
     }
 
     return EB_NULL;

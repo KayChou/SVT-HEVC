@@ -1415,10 +1415,9 @@ void* SourceBasedOperationsKernel(void *inputPtr)
 		inputResultsPtr = (InitialRateControlResults_t*)inputResultsWrapperPtr->objectPtr;
         pictureControlSetPtr = (PictureParentControlSet_t*)inputResultsPtr->pictureControlSetWrapperPtr->objectPtr;
 		sequenceControlSetPtr = (SequenceControlSet_t*)pictureControlSetPtr->sequenceControlSetWrapperPtr->objectPtr;
-
+        eb_add_time_entry(EB_SBO, EB_START, EB_TASK0, pictureControlSetPtr->pictureNumber, -1);
 #if DEADLOCK_DEBUG
-        if ((pictureControlSetPtr->pictureNumber >= MIN_POC) && (pictureControlSetPtr->pictureNumber <= MAX_POC))
-            SVT_LOG("POC %lu SRC IN \n", pictureControlSetPtr->pictureNumber);
+        SVT_LOG("POC %lld SRC IN \n", pictureControlSetPtr->pictureNumber);
 #endif
 		pictureControlSetPtr->darkBackGroundlightForeGround = EB_FALSE;
 		contextPtr->pictureNumGrassLcu = 0;
@@ -1666,6 +1665,10 @@ void* SourceBasedOperationsKernel(void *inputPtr)
             }
         }
 
+#if DEADLOCK_DEBUG
+        SVT_LOG("POC %lld SRC OUT \n", pictureControlSetPtr->pictureNumber);
+#endif
+
         // Get Empty Results Object
         EbGetEmptyObject(
             contextPtr->pictureDemuxResultsOutputFifoPtr,
@@ -1697,13 +1700,9 @@ void* SourceBasedOperationsKernel(void *inputPtr)
                 latency);
 #endif
 
+        eb_add_time_entry(EB_SBO, EB_FINISH, (EbTaskType)EB_PIC_INPUT, pictureControlSetPtr->pictureNumber, -1);
         // Post the Full Results Object
         EbPostFullObject(outputResultsWrapperPtr);
-
-#if DEADLOCK_DEBUG
-        if ((pictureControlSetPtr->pictureNumber >= MIN_POC) && (pictureControlSetPtr->pictureNumber <= MAX_POC))
-            SVT_LOG("POC %lu SRC OUT \n", pictureControlSetPtr->pictureNumber);
-#endif
 
     }
     return EB_NULL;

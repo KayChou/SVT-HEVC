@@ -4238,11 +4238,11 @@ void* PictureAnalysisKernel(void *inputPtr)
 
 		inputResultsPtr = (ResourceCoordinationResults_t*)inputResultsWrapperPtr->objectPtr;
 		pictureControlSetPtr = (PictureParentControlSet_t*)inputResultsPtr->pictureControlSetWrapperPtr->objectPtr;
+		eb_add_time_entry(EB_PIC_ANALYSIS, EB_START, EB_TASK0, pictureControlSetPtr->pictureNumber, -1);
 		sequenceControlSetPtr = (SequenceControlSet_t*)pictureControlSetPtr->sequenceControlSetWrapperPtr->objectPtr;
 		inputPicturePtr = pictureControlSetPtr->enhancedPicturePtr;
 #if DEADLOCK_DEBUG
-        if ((pictureControlSetPtr->pictureNumber >= MIN_POC) && (pictureControlSetPtr->pictureNumber <= MAX_POC))
-            SVT_LOG("POC %lu PA IN \n", pictureControlSetPtr->pictureNumber);
+        SVT_LOG("POC %lld PA IN \n", pictureControlSetPtr->pictureNumber);
 #endif
 		paReferenceObject = (EbPaReferenceObject_t*)pictureControlSetPtr->paReferencePictureWrapperPtr->objectPtr;
 		inputPaddedPicturePtr = (EbPictureBufferDesc_t*)paReferenceObject->inputPaddedPicturePtr;
@@ -4334,6 +4334,10 @@ void* PictureAnalysisKernel(void *inputPtr)
 		outputResultsPtr = (PictureAnalysisResults_t*)outputResultsWrapperPtr->objectPtr;
 		outputResultsPtr->pictureControlSetWrapperPtr = inputResultsPtr->pictureControlSetWrapperPtr;
 
+#if DEADLOCK_DEBUG
+        SVT_LOG("POC %lld PA OUT \n", pictureControlSetPtr->pictureNumber);
+#endif
+
 		// Release the Input Results
 		EbReleaseObject(inputResultsWrapperPtr);
 
@@ -4355,13 +4359,10 @@ void* PictureAnalysisKernel(void *inputPtr)
                 pictureControlSetPtr->decodeOrder,
                 latency);
 #endif
+		eb_add_time_entry(EB_PIC_ANALYSIS, EB_FINISH, EB_TASK0, pictureControlSetPtr->pictureNumber, -1);
 		// Post the Full Results Object
 		EbPostFullObject(outputResultsWrapperPtr);
 
-#if DEADLOCK_DEBUG
-        if ((pictureControlSetPtr->pictureNumber >= MIN_POC) && (pictureControlSetPtr->pictureNumber <= MAX_POC))
-            SVT_LOG("POC %lu PA OUT \n", pictureControlSetPtr->pictureNumber);
-#endif
 	}
 	return EB_NULL;
 }

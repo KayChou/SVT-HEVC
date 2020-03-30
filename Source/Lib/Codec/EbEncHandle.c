@@ -1516,6 +1516,7 @@ EB_API EB_ERRORTYPE EbDeinitEncoder(EB_COMPONENTTYPE *h265EncComponent)
 {
     if (h265EncComponent == NULL)
         return EB_ErrorBadParameter;
+    eb_print_time_usage();
     EbEncHandle_t *encHandlePtr = (EbEncHandle_t*)h265EncComponent->pComponentPrivate;
     if (encHandlePtr) {
         //Jing: Send signal to quit thread
@@ -1595,7 +1596,7 @@ EB_ERRORTYPE EbH265EncComponentDeInit(EB_COMPONENTTYPE  *h265EncComponent)
 
     if (h265EncComponent->pComponentPrivate) {
         EbEncHandle_t *handle;
-        handle = (EbEncHandle_t*)(h265EncComponent->pComponentPrivate);
+        handle = h265EncComponent->pComponentPrivate;
         EB_DELETE(handle);
     }
     else {

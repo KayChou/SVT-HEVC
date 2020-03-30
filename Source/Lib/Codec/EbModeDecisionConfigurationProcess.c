@@ -1929,9 +1929,9 @@ void* ModeDecisionConfigurationKernel(void *inputPtr)
 		rateControlResultsPtr = (RateControlResults_t*)rateControlResultsWrapperPtr->objectPtr;
 		pictureControlSetPtr = (PictureControlSet_t*)rateControlResultsPtr->pictureControlSetWrapperPtr->objectPtr;
 		sequenceControlSetPtr = (SequenceControlSet_t*)pictureControlSetPtr->sequenceControlSetWrapperPtr->objectPtr;
+        eb_add_time_entry(EB_MD_CONFIG, EB_START, EB_TASK0, pictureControlSetPtr->pictureNumber, -1);
 #if DEADLOCK_DEBUG
-        if ((pictureControlSetPtr->pictureNumber >= MIN_POC) && (pictureControlSetPtr->pictureNumber <= MAX_POC))
-            SVT_LOG("POC %lu MDC IN \n", pictureControlSetPtr->pictureNumber);
+        SVT_LOG("POC %lld MDC IN \n", pictureControlSetPtr->pictureNumber);
 #endif
         SignalDerivationModeDecisionConfigKernelOq(
                 pictureControlSetPtr,
@@ -2079,6 +2079,9 @@ void* ModeDecisionConfigurationKernel(void *inputPtr)
             pictureControlSetPtr->ParentPcsPtr->averageQp = (EB_U8)pictureControlSetPtr->ParentPcsPtr->pictureQp;
         }
 
+#if DEADLOCK_DEBUG
+        SVT_LOG("POC %lld MDC OUT \n", pictureControlSetPtr->pictureNumber);
+#endif
         // Post the results to the MD processes
         EB_U16 tileGroupRowCnt = sequenceControlSetPtr->tileGroupRowCountArray[pictureControlSetPtr->temporalLayerIndex];
         EB_U16 tileGroupColCnt = sequenceControlSetPtr->tileGroupColCountArray[pictureControlSetPtr->temporalLayerIndex];
@@ -2094,14 +2097,11 @@ void* ModeDecisionConfigurationKernel(void *inputPtr)
                 encDecTasksPtr->inputType = ENCDEC_TASKS_MDC_INPUT;
                 encDecTasksPtr->tileGroupIndex = tileGroupIdx;
 
+                eb_add_time_entry(EB_MD_CONFIG, EB_FINISH, EB_TASK0, pictureControlSetPtr->pictureNumber, tileGroupIdx);
                 // Post the Full Results Object
                 EbPostFullObject(encDecTasksWrapperPtr);
             }
         }
-#if DEADLOCK_DEBUG
-        if ((pictureControlSetPtr->pictureNumber >= MIN_POC) && (pictureControlSetPtr->pictureNumber <= MAX_POC))
-            SVT_LOG("POC %lu MDC OUT \n", pictureControlSetPtr->pictureNumber);
-#endif
 
 #if LATENCY_PROFILE
         double latency = 0.0;

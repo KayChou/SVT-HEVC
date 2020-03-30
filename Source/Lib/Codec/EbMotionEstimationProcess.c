@@ -637,7 +637,7 @@ void* MotionEstimationKernel(void *inputPtr)
 	EbPictureBufferDesc_t       *sixteenthDecimatedPicturePtr;
 
 	// Segments
-	EB_U32                      segmentIndex;
+	EB_U32                      segmentIndex = 0;
 	EB_U32                      xSegmentIndex;
 	EB_U32                      ySegmentIndex;
 	EB_U32                      xLcuStartIndex;
@@ -661,19 +661,18 @@ void* MotionEstimationKernel(void *inputPtr)
 
 		inputResultsPtr = (PictureDecisionResults_t*)inputResultsWrapperPtr->objectPtr;
 		pictureControlSetPtr = (PictureParentControlSet_t*)inputResultsPtr->pictureControlSetWrapperPtr->objectPtr;
-		sequenceControlSetPtr = (SequenceControlSet_t*)pictureControlSetPtr->sequenceControlSetWrapperPtr->objectPtr;
+		eb_add_time_entry(EB_ME, EB_START, EB_TASK0, pictureControlSetPtr->pictureNumber, segmentIndex);
+        sequenceControlSetPtr = (SequenceControlSet_t*)pictureControlSetPtr->sequenceControlSetWrapperPtr->objectPtr;
 		paReferenceObject = (EbPaReferenceObject_t*)pictureControlSetPtr->paReferencePictureWrapperPtr->objectPtr;
 		quarterDecimatedPicturePtr = (EbPictureBufferDesc_t*)paReferenceObject->quarterDecimatedPicturePtr;
 		sixteenthDecimatedPicturePtr = (EbPictureBufferDesc_t*)paReferenceObject->sixteenthDecimatedPicturePtr;
         inputPaddedPicturePtr = (EbPictureBufferDesc_t*)paReferenceObject->inputPaddedPicturePtr;
 		inputPicturePtr = pictureControlSetPtr->enhancedPicturePtr;
+#if DEADLOCK_DEBUG
+        SVT_LOG("POC %lld ME IN \n", pictureControlSetPtr->pictureNumber);
+#endif
 		// Segments
 		segmentIndex = inputResultsPtr->segmentIndex;
-#if DEADLOCK_DEBUG
-        if ((pictureControlSetPtr->pictureNumber >= MIN_POC) && (pictureControlSetPtr->pictureNumber <= MAX_POC))
-            if (segmentIndex == 0)
-                SVT_LOG("POC %lu ME IN \n", pictureControlSetPtr->pictureNumber);
-#endif
 		pictureWidthInLcu = (sequenceControlSetPtr->lumaWidth + sequenceControlSetPtr->lcuSize - 1) / sequenceControlSetPtr->lcuSize;
 		pictureHeightInLcu = (sequenceControlSetPtr->lumaHeight + sequenceControlSetPtr->lcuSize - 1) / sequenceControlSetPtr->lcuSize;
 		SEGMENT_CONVERT_IDX_TO_XY(segmentIndex, xSegmentIndex, ySegmentIndex, pictureControlSetPtr->meSegmentsColumnCount);
@@ -955,6 +954,9 @@ void* MotionEstimationKernel(void *inputPtr)
 				}
 			}
 		}
+#if DEADLOCK_DEBUG
+        SVT_LOG("POC %lld ME OUT \n", pictureControlSetPtr->pictureNumber);
+#endif
         EbReleaseMutex(pictureControlSetPtr->rcDistortionHistogramMutex);
 		// Get Empty Results Object
 		EbGetEmptyObject(
@@ -968,13 +970,9 @@ void* MotionEstimationKernel(void *inputPtr)
 		// Release the Input Results
 		EbReleaseObject(inputResultsWrapperPtr);
 
+        eb_add_time_entry(EB_ME, EB_FINISH, EB_TASK0, pictureControlSetPtr->pictureNumber, segmentIndex);
 		// Post the Full Results Object
 		EbPostFullObject(outputResultsWrapperPtr);
-#if DEADLOCK_DEBUG
-        if ((pictureControlSetPtr->pictureNumber >= MIN_POC) && (pictureControlSetPtr->pictureNumber <= MAX_POC))
-            if (segmentIndex == (EB_U32)(pictureControlSetPtr->meSegmentsTotalCount - 1))
-                SVT_LOG("POC %lu ME OUT \n", pictureControlSetPtr->pictureNumber);
-#endif
 	}
 	return EB_NULL;
 }

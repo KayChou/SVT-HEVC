@@ -209,10 +209,9 @@ void* PictureManagerKernel(void *inputPtr)
             pictureControlSetPtr            = (PictureParentControlSet_t*)  inputPictureDemuxPtr->pictureControlSetWrapperPtr->objectPtr;
             sequenceControlSetPtr           = (SequenceControlSet_t*) pictureControlSetPtr->sequenceControlSetWrapperPtr->objectPtr;
             encodeContextPtr                = sequenceControlSetPtr->encodeContextPtr;
-
+            eb_add_time_entry(EB_PIC_MANAGER, EB_START, (EbTaskType)inputPictureDemuxPtr->pictureType, pictureControlSetPtr->pictureNumber, -1);
 #if DEADLOCK_DEBUG
-            if ((pictureControlSetPtr->pictureNumber >= MIN_POC) && (pictureControlSetPtr->pictureNumber <= MAX_POC))
-                SVT_LOG("POC %lu PM IN \n", pictureControlSetPtr->pictureNumber);
+            SVT_LOG("POC %lld PM IN \n", pictureControlSetPtr->pictureNumber);
 #endif
 		   queueEntryIndex = (EB_S32)(pictureControlSetPtr->pictureNumber - encodeContextPtr->pictureManagerReorderQueue[encodeContextPtr->pictureManagerReorderQueueHeadIndex]->pictureNumber);
 		   queueEntryIndex += encodeContextPtr->pictureManagerReorderQueueHeadIndex;
@@ -503,7 +502,9 @@ void* PictureManagerKernel(void *inputPtr)
 				   EbReleaseObject(pictureControlSetPtr->referencePictureWrapperPtr);
 				   pictureControlSetPtr->referencePictureWrapperPtr = (EbObjectWrapper_t*)EB_NULL;
 			   }
-
+#if DEADLOCK_DEBUG
+               SVT_LOG("POC %lld PM OUT \n", pictureControlSetPtr->pictureNumber);
+#endif
 			   // Release the Picture Manager Reorder Queue
 			   queueEntryPtr->parentPcsWrapperPtr = (EbObjectWrapper_t*)EB_NULL;
 			   queueEntryPtr->pictureNumber += PICTURE_MANAGER_REORDER_QUEUE_MAX_DEPTH;
@@ -521,7 +522,7 @@ void* PictureManagerKernel(void *inputPtr)
 
             sequenceControlSetPtr   = (SequenceControlSet_t*) inputPictureDemuxPtr->sequenceControlSetWrapperPtr->objectPtr;
             encodeContextPtr        = sequenceControlSetPtr->encodeContextPtr;
-
+            eb_add_time_entry(EB_PIC_MANAGER, EB_START, (EbTaskType)inputPictureDemuxPtr->pictureType, inputPictureDemuxPtr->pictureNumber, -1);
             // Check if Reference Queue is full
             CHECK_REPORT_ERROR(
                 (encodeContextPtr->referencePictureQueueHeadIndex != encodeContextPtr->referencePictureQueueTailIndex),
@@ -564,7 +565,7 @@ void* PictureManagerKernel(void *inputPtr)
 
             sequenceControlSetPtr = (SequenceControlSet_t*)inputPictureDemuxPtr->sequenceControlSetWrapperPtr->objectPtr;
             encodeContextPtr = sequenceControlSetPtr->encodeContextPtr;
-
+            eb_add_time_entry(EB_PIC_MANAGER, EB_START, (EbTaskType)inputPictureDemuxPtr->pictureType, inputPictureDemuxPtr->pictureNumber, -1);
             referenceQueueIndex = encodeContextPtr->referencePictureQueueHeadIndex;
             // Find the Reference in the Reference Queue
             do {
@@ -850,7 +851,7 @@ void* PictureManagerKernel(void *inputPtr)
 
                             ChildPictureControlSetPtr->refPicQpArray[REF_LIST_1]  = ((EbReferenceObject_t*) referenceEntryPtr->referenceObjectPtr->objectPtr)->qp;
                             ChildPictureControlSetPtr->refSliceTypeArray[REF_LIST_1] = ((EbReferenceObject_t*) referenceEntryPtr->referenceObjectPtr->objectPtr)->sliceType;
-                            
+
 
 
                             // Increment the Reference's liveCount by the number of tiles in the input picture
@@ -892,13 +893,9 @@ void* PictureManagerKernel(void *inputPtr)
                     rateControlTasksPtr->pictureControlSetWrapperPtr = ChildPictureControlSetWrapperPtr;
                     rateControlTasksPtr->taskType                    = RC_PICTURE_MANAGER_RESULT;
 
+                    eb_add_time_entry(EB_PIC_MANAGER, EB_FINISH, (EbTaskType)RC_PICTURE_MANAGER_RESULT, inputPictureDemuxPtr->pictureNumber, -1);
                     // Post the Full Results Object
                     EbPostFullObject(outputWrapperPtr);
-#if DEADLOCK_DEBUG
-                    if ((ChildPictureControlSetPtr->pictureNumber >= MIN_POC) && (ChildPictureControlSetPtr->pictureNumber <= MAX_POC))
-                        SVT_LOG("POC %lu PM OUT \n", ChildPictureControlSetPtr->pictureNumber);
-#endif
-
 #if LATENCY_PROFILE
                     double latency = 0.0;
                     EB_U64 finishTimeSeconds = 0;

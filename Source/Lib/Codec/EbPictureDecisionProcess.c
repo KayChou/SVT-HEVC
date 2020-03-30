@@ -613,10 +613,10 @@ void* PictureDecisionKernel(void *inputPtr)
         pictureControlSetPtr    = (PictureParentControlSet_t*)  inputResultsPtr->pictureControlSetWrapperPtr->objectPtr;
         sequenceControlSetPtr   = (SequenceControlSet_t*)       pictureControlSetPtr->sequenceControlSetWrapperPtr->objectPtr;
         encodeContextPtr        = (EncodeContext_t*)            sequenceControlSetPtr->encodeContextPtr;
+        eb_add_time_entry(EB_PIC_DECISION, EB_START, EB_TASK0, pictureControlSetPtr->pictureNumber, -1);
 
 #if DEADLOCK_DEBUG
-        if ((pictureControlSetPtr->pictureNumber >= MIN_POC) && (pictureControlSetPtr->pictureNumber <= MAX_POC))
-            SVT_LOG("POC %lu PD IN \n", pictureControlSetPtr->pictureNumber);
+        SVT_LOG("POC %lld PD IN \n", pictureControlSetPtr->pictureNumber);
 #endif
 
         loopCount ++;
@@ -1307,13 +1307,10 @@ void* PictureDecisionKernel(void *inputPtr)
 
                                 outputResultsPtr->segmentIndex = segmentIndex;
 
+                                eb_add_time_entry(EB_PIC_DECISION, EB_FINISH, EB_TASK0, pictureControlSetPtr->pictureNumber, segmentIndex);
                                 // Post the Full Results Object
                                 EbPostFullObject(outputResultsWrapperPtr);
                             }
-#if DEADLOCK_DEBUG
-                            if ((pictureControlSetPtr->pictureNumber >= MIN_POC) && (pictureControlSetPtr->pictureNumber <= MAX_POC))
-                                SVT_LOG("POC %lu PD OUT \n", pictureControlSetPtr->pictureNumber);
-#endif
                         }
 
 						if (pictureIndex == contextPtr->miniGopEndIndex[miniGopIndex]) {
@@ -1378,6 +1375,9 @@ void* PictureDecisionKernel(void *inputPtr)
             if(windowAvail == EB_FALSE  && framePasseThru == EB_FALSE)
                 break;
         }
+#if DEADLOCK_DEBUG
+        SVT_LOG("POC %lld PD OUT \n", pictureControlSetPtr->pictureNumber);
+#endif
         // Release the Input Results
         EbReleaseObject(inputResultsWrapperPtr);
     }
